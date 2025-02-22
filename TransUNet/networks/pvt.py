@@ -96,7 +96,6 @@ class Block(nn.Module):
     def forward(self, x, H, W):
         x = x + self.drop_path(self.attn(self.norm1(x), H, W))
         x = x + self.drop_path(self.mlp(self.norm2(x)))
-        print(f"[Transformer Block] Output shape: {x.shape}")
         return x
 
 
@@ -125,9 +124,6 @@ class PatchEmbed(nn.Module):
         x = self.proj(x).flatten(2).transpose(1, 2)
         x = self.norm(x)
         H, W = H // self.patch_size[0], W // self.patch_size[1]
-        # 添加打印语句
-        print(f"[PatchEmbed] Input shape: {B}x{C}x{H*self.patch_size[0]}x{W*self.patch_size[1]}") 
-        print(f"              Output shape: {x.shape} (patches: {H}x{W})")
 
         return x, (H, W)
 
@@ -226,7 +222,6 @@ class PyramidVisionTransformer(nn.Module):
 
         for i in range(self.num_stages):
             patch_embed = getattr(self, f"patch_embed{i + 1}")
-            print(f"\nStage {i+1} Input shape: {x.shape}")
             pos_embed = getattr(self, f"pos_embed{i + 1}")
             pos_drop = getattr(self, f"pos_drop{i + 1}")
             block = getattr(self, f"block{i + 1}")
@@ -249,7 +244,6 @@ class PyramidVisionTransformer(nn.Module):
                 self.stage_features[f"stage_{i+1}"] = x
             else:
                 self.stage_features[f"stage_{i+1}"] = x
-            print(f"Stage {i+1} Output shape: {x.shape}")
             
         x = self.norm(x)
 

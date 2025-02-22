@@ -314,6 +314,7 @@ class DecoderBlock(nn.Module):
         self.up = nn.UpsamplingBilinear2d(scale_factor=2)
 
     def forward(self, x, skip=None):
+        print(f"Before upsampling: {x.shape}")  # 打印进入上采样之前的维度
         x = self.up(x)  # 上采样，将特征图分辨率扩大2倍
         if skip is not None:  # 如果有跳跃连接的特征
             x = torch.cat([x, skip], dim=1)  # 拼接上采样特征与跳跃连接特征

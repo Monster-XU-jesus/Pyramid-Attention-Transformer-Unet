@@ -298,6 +298,7 @@ class DecoderBlock(nn.Module):
             use_batchnorm=True,
     ):
         super().__init__()
+        print(f"必看DecoderBlock in_channels={in_channels}, out_channels={out_channels}, skip_channels={skip_channels}")
         self.conv1 = Conv2dReLU(
             in_channels + skip_channels,
             out_channels,
@@ -314,12 +315,30 @@ class DecoderBlock(nn.Module):
         )
         self.up = nn.UpsamplingBilinear2d(scale_factor=2)
 
+        # 将skip的特征图与上采样特征图的空间尺度匹配
+        self.skip_align = nn.Sequential(
+            nn.UpsamplingBilinear2d(scale_factor=2),
+            # nn.Conv2d(skip_channels, in_channels, kernel_size=1),  # 将 skip 特征的通道数调整为与主路径相同
+            nn.BatchNorm2d(in_channels),
+            nn.ReLU(inplace=True)
+        ) if skip_channels > 0 else None
+
     def forward(self, x, skip=None):
+        print(f"\nup before x.shape={x.shape}")
         x = self.up(x)  # 上采样，将特征图分辨率扩大2倍
+        print(f"up after: x.shape={x.shape}, skip.shape={skip.shape}")
+        # print(f"必看Before concatenation: x.shape=[24, 512, 28, 28], skip.shape=[24, 256, 14, 14]")
         if skip is not None:  # 如果有跳跃连接的特征
+            # 当存在skip连接时进行尺寸对齐
+            if self.skip_align:
+                skip = self.skip_align(skip)
+                # skip = torch.randn(8, 512, 28, 28)
+                print(f"After skip_align: skip.shape={skip.shape}")
             x = torch.cat([x, skip], dim=1)  # 拼接上采样特征与跳跃连接特征
+            print(f"必看After concatenation: x.shape={x.shape}, skip.shape={skip.shape}")
         x = self.conv1(x)  # 第一个卷积块处理
         x = self.conv2(x)  # 第二个卷积块处理
+        print(f"\nDecoderBlock 卷积处理结束: x.shape={x.shape}")
         return x
 
 
@@ -335,17 +354,14 @@ class DecoderCup(nn.Module):
     def __init__(self, config):
         super().__init__()
         # 调整通道匹配PVT输出
-        decoder_channels = [512, 320, 128, 64]  # 对应PVT各阶段输出
-        skip_channels = [320, 128, 256, 0]      # 与stage_convs后的通道对齐
+        inner_channels = [512, 256, 128, 64]
+        decoder_channels = [256, 128, 64, 16]
+        skip_channels = [512, 256, 64, 0]
 
-        self.blocks = nn.ModuleList()
-        for i in range(len(decoder_channels)-1):
-            self.blocks.append(DecoderBlock(
-                in_channels=decoder_channels[i],
-                out_channels=decoder_channels[i+1],
-                skip_channels=skip_channels[i]
-                )
-            )
+        blocks = [
+            DecoderBlock(in_ch, out_ch, sk_ch) for in_ch, out_ch, sk_ch in zip(inner_channels, decoder_channels, skip_channels)
+        ]
+        self.blocks = nn.ModuleList(blocks)
 
     def forward(self, x, features):
         B, N, C = x.shape
@@ -454,10 +470,24 @@ class PyramidAttentionTransfromerUnet(nn.Module):
 
         # 通道对齐卷积（不太理解不严格递增能不能行？）
         self.stage_convs = nn.ModuleList([
-            # nn.Conv2d(64, 256, 1),
-            nn.Conv2d(128, 128, 1),
-            nn.Conv2d(320, 320, 1),
+            nn.Sequential(
+                nn.Conv2d(64, 128, kernel_size=1),  # 64->128
+                nn.BatchNorm2d(128),
+                nn.ReLU(inplace=True),
+            ),
+            nn.Sequential(
+                nn.Conv2d(128, 256, kernel_size=1),  # 128->256
+                nn.BatchNorm2d(256),
+                nn.ReLU(inplace=True),
+            ),
+            nn.Sequential(
+                nn.Conv2d(320, 512, kernel_size=1),  # 256->512（原320->256改为320->512）
+                nn.BatchNorm2d(512),
+                nn.ReLU(inplace=True),
+            ),
+            nn.Identity(),
         ])
+
 
     def forward(self, x):
         # 处理单通道输入（灰度图转RGB）
@@ -477,9 +507,9 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         s4_adapted = self.adapter(s4)  # [B,196,512]
 
         # 通道对齐
-        # s1 = self.stage_convs[0](s1)  # [B,256,56,56]
-        s2 = self.stage_convs[0](s2)  # [B,128,28,28]
-        s3 = self.stage_convs[1](s3)  # [B,320,14,14]
+        s1 = self.stage_convs[0](s1)  # [B,64,56,56]
+        s2 = self.stage_convs[1](s2)  # [B,128,28,28] 
+        s3 = self.stage_convs[2](s3)  # [B,320->256,14,14]
 
         x = self.decoder(s4_adapted, [s3, s2, s1])
         logits = self.seg_head(x)
