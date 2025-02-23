@@ -298,7 +298,7 @@ class DecoderBlock(nn.Module):
             use_batchnorm=True,
     ):
         super().__init__()
-        print(f"必看DecoderBlock in_channels={in_channels}, out_channels={out_channels}, skip_channels={skip_channels}")
+        # print(f"必看DecoderBlock in_channels={in_channels}, out_channels={out_channels}, skip_channels={skip_channels}")
         self.conv1 = Conv2dReLU(
             in_channels,
             out_channels,
@@ -316,12 +316,12 @@ class DecoderBlock(nn.Module):
         self.up = nn.UpsamplingBilinear2d(scale_factor=2)
 
     def forward(self, x, skip=None):
-        print(f"\nup before x.shape={x.shape}")
+        # print(f"\nup before x.shape={x.shape}")
         x = self.up(x)
-        print(f"up after: x.shape={x.shape}")
+        # print(f"up after: x.shape={x.shape}")
         x = self.conv1(x)
         x = self.conv2(x)
-        print(f"DecoderBlock output shape: {x.shape}")
+        # print(f"DecoderBlock output shape: {x.shape}")
         return x
 
 class SegmentationHead(nn.Sequential):
@@ -371,14 +371,14 @@ class VisionTransformer(nn.Module):
         self.config = config
 
     def forward(self, x):
-        print(f"\n{x.shape}"); # [24, 1, 224, 224]
+        # print(f"\n{x.shape}")
         if x.size()[1] == 1:
             x = x.repeat(1,3,1,1)
-        print(f"\n{x.shape}"); # [24, 3, 224, 224]
-        x, attn_weights, features = self.transformer(x)  # (B, n_patch, hidden)
-        print(f"self.decoder之前{x.shape}"); # [24, 196, 768]
+        # print(f"\n{x.shape}")
+        x, attn_weights, features = self.transformer(x)
+        # print(f"self.decoder之前{x.shape}")
         x = self.decoder(x, features)
-        print(f"self.decoder之后{x.shape}"); #[24, 16, 224, 224]
+        # print(f"self.decoder之后{x.shape}")
 
         logits = self.segmentation_head(x)
         return logits
@@ -442,7 +442,7 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         
         # 解码器调整(config似乎没用上)
         self.decoder = DecoderCup(config)
-        print(f"num_classes: {num_classes}")
+        # print(f"num_classes: {num_classes}")
         self.seg_head = SegmentationHead(
             in_channels=config.decoder_channels[-1],
             out_channels=num_classes,
@@ -471,25 +471,21 @@ class PyramidAttentionTransfromerUnet(nn.Module):
 
 
     def forward(self, x):
-        # 处理单通道输入（灰度图转RGB）
-        if x.size()[1] == 1:  # 检查通道维度是否为1
-            x = x.repeat(1, 3, 1, 1)  # 复制单通道到三通道
+        if x.size()[1] == 1:
+            x = x.repeat(1, 3, 1, 1)
             
-        # PVT特征提取
-        _ = self.pvt(x)  # 仅用于提取特征
+        _ = self.pvt(x)
         
-        # 获取各阶段特征
-        s1 = self.pvt.get_stage_features(1)  # [B,64,56,56]
-        print(f"s1.shape={s1.shape}")
-        s2 = self.pvt.get_stage_features(2)  # [B,128,28,28]
-        print(f"s2.shape={s2.shape}")
-        s3 = self.pvt.get_stage_features(3)  # [B,320,14,14]
-        print(f"s3.shape={s3.shape}")
-        s4 = self.pvt.get_stage_features(4)  # [B,50,512]
-        print(f"s4.shape={s4.shape}")
+        s1 = self.pvt.get_stage_features(1)
+        # print(f"s1.shape={s1.shape}")
+        s2 = self.pvt.get_stage_features(2)
+        # print(f"s2.shape={s2.shape}")
+        s3 = self.pvt.get_stage_features(3)
+        # print(f"s3.shape={s3.shape}")
+        s4 = self.pvt.get_stage_features(4)
+        # print(f"s4.shape={s4.shape}")
 
-        # 处理最后一层特征
-        s4_adapted = self.adapter(s4)  # [B,196,512]
+        s4_adapted = self.adapter(s4)
 
         x = self.decoder(s4_adapted, [s3, s2, s1])
         logits = self.seg_head(x)

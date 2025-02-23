@@ -24,3 +24,5 @@ segmentation/work_dirs
 .idea/
 .model/
 model/
+.ipynb_checkpoints
+.vscode
