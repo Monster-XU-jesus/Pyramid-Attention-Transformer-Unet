@@ -315,12 +315,22 @@ class DecoderBlock(nn.Module):
         )
         self.up = nn.UpsamplingBilinear2d(scale_factor=2)
 
+        # 将skip的特征图与上采样特征图的空间尺度匹配
+        self.skip_align = nn.Sequential(
+            nn.UpsamplingBilinear2d(scale_factor=2),
+            nn.BatchNorm2d(skip_channels),
+            nn.ReLU(inplace=True)
+        ) if skip_channels > 0 else None
+
     def forward(self, x, skip=None):
         print(f"\nup before x.shape={x.shape}")
         x = self.up(x)  # 上采样，将特征图分辨率扩大2倍
-        print(f"up after: x.shape={x.shape}, skip.shape={skip.shape}")
+        print(f"up after: x.shape={x.shape}")
         if skip is not None:  # 如果有跳跃连接的特征
-            x = torch.cat([x, skip], dim=1)  # 拼接上采样特征与跳跃连接特征
+            if self.skip_align is not None:
+                skip = self.skip_align(skip)
+                print(f"after skip_align: skip.shape={skip.shape}")
+            x = torch.cat([x, skip], dim=1)
             print(f"必看After concatenation: x.shape={x.shape}, skip.shape={skip.shape}")
         x = self.conv1(x)  # 第一个卷积块处理
         x = self.conv2(x)  # 第二个卷积块处理
