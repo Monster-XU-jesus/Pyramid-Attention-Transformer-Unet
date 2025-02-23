@@ -1,0 +1,26 @@
+# 忽略交换文件
+*.swp
+
+# 忽略 Python 编译文件
+**/__pycache__/
+
+# 忽略临时文件、检查点、数据等
+imnet_resnet50_scratch/timm_temp/
+.dumbo.json
+checkpoints/
+data/
+tmp.txt
+tmp/
+**/pretrained/
+**/work_dirs/
+**/results.pkl
+**/arun_log/
+**/checkpoints/
+**/tmp/
+**/vis/
+segmentation/work_dirs
+
+# 忽略IDE和工具生成的文件
+.idea/
+.model/
+model/
