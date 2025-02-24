@@ -449,26 +449,6 @@ class PyramidAttentionTransfromerUnet(nn.Module):
             kernel_size=3
         )
 
-        # 通道对齐卷积（不太理解不严格递增能不能行？）
-        self.stage_convs = nn.ModuleList([
-            nn.Sequential(
-                nn.Conv2d(64, 128, kernel_size=1),  # 64->128
-                nn.BatchNorm2d(128),
-                nn.ReLU(inplace=True),
-            ),
-            nn.Sequential(
-                nn.Conv2d(128, 256, kernel_size=1),  # 128->256
-                nn.BatchNorm2d(256),
-                nn.ReLU(inplace=True),
-            ),
-            nn.Sequential(
-                nn.Conv2d(320, 512, kernel_size=1),  # 256->512（原320->256改为320->512）
-                nn.BatchNorm2d(512),
-                nn.ReLU(inplace=True),
-            ),
-            nn.Identity(),
-        ])
-
 
     def forward(self, x):
         if x.size()[1] == 1:

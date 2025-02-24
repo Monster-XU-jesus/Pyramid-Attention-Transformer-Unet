@@ -247,7 +247,7 @@ class PyramidVisionTransformer(nn.Module):
             
         x = self.norm(x)
 
-        print(f"forward_features结束输出的特征图{x.shape}")
+        # print(f"forward_features结束输出的特征图{x.shape}")
         
         return x[:, 0]
 

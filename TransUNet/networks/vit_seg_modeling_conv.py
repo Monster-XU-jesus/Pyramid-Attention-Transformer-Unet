@@ -298,7 +298,7 @@ class DecoderBlock(nn.Module):
             use_batchnorm=True,
     ):
         super().__init__()
-        print(f"必看DecoderBlock in_channels={in_channels}, out_channels={out_channels}, skip_channels={skip_channels}")
+        # print(f"必看DecoderBlock in_channels={in_channels}, out_channels={out_channels}, skip_channels={skip_channels}")
         self.conv1 = Conv2dReLU(
             in_channels + skip_channels,
             out_channels,
@@ -323,18 +323,18 @@ class DecoderBlock(nn.Module):
         ) if skip_channels > 0 else None
 
     def forward(self, x, skip=None):
-        print(f"\nup before x.shape={x.shape}")
+        # print(f"\nup before x.shape={x.shape}")
         x = self.up(x)  # 上采样，将特征图分辨率扩大2倍
-        print(f"up after: x.shape={x.shape}")
+        # print(f"up after: x.shape={x.shape}")
         if skip is not None:  # 如果有跳跃连接的特征
             if self.skip_align is not None:
                 skip = self.skip_align(skip)
-                print(f"after skip_align: skip.shape={skip.shape}")
+                # print(f"after skip_align: skip.shape={skip.shape}")
             x = torch.cat([x, skip], dim=1)
-            print(f"必看After concatenation: x.shape={x.shape}, skip.shape={skip.shape}")
+            # print(f"必看After concatenation: x.shape={x.shape}, skip.shape={skip.shape}")
         x = self.conv1(x)  # 第一个卷积块处理
         x = self.conv2(x)  # 第二个卷积块处理
-        print(f"\nDecoderBlock 卷积处理结束: x.shape={x.shape}")
+        # print(f"\nDecoderBlock 卷积处理结束: x.shape={x.shape}")
         return x
 
 
@@ -386,14 +386,14 @@ class VisionTransformer(nn.Module):
         self.config = config
 
     def forward(self, x):
-        print(f"\n{x.shape}"); # [24, 1, 224, 224]
+        # print(f"\n{x.shape}"); # [24, 1, 224, 224]
         if x.size()[1] == 1:
             x = x.repeat(1,3,1,1)
-        print(f"\n{x.shape}"); # [24, 3, 224, 224]
+        # print(f"\n{x.shape}"); # [24, 3, 224, 224]
         x, attn_weights, features = self.transformer(x)  # (B, n_patch, hidden)
-        print(f"self.decoder之前{x.shape}"); # [24, 196, 768]
+        # print(f"self.decoder之前{x.shape}"); # [24, 196, 768]
         x = self.decoder(x, features)
-        print(f"self.decoder之后{x.shape}"); #[24, 16, 224, 224]
+        # print(f"self.decoder之后{x.shape}"); #[24, 16, 224, 224]
 
         logits = self.segmentation_head(x)
         return logits
@@ -457,7 +457,7 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         
         # 解码器调整(config似乎没用上)
         self.decoder = DecoderCup(config)
-        print(f"num_classes: {num_classes}")
+        # print(f"num_classes: {num_classes}")
         self.seg_head = SegmentationHead(
             in_channels=config.decoder_channels[-1],
             out_channels=num_classes,

@@ -5,9 +5,7 @@ import random
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-# from networks.vit_seg_modeling import PyramidAttentionTransfromerUnet as ViT_seg
 from networks.vit_seg_modeling_conv import PyramidAttentionTransfromerUnet as ViT_seg
-# from networks.vit_seg_modeling import CONFIGS as CONFIGS_ViT_seg
 from networks.vit_seg_modeling_conv import CONFIGS as CONFIGS_ViT_seg
 from trainer import trainer_synapse
 import torch
@@ -27,6 +25,7 @@ parser.add_argument('--max_iterations', type=int,
 parser.add_argument('--max_epochs', type=int,
                     default=150, help='maximum epoch number to train')
 parser.add_argument('--batch_size', type=int,
+                    # default=3, help='batch_size per gpu')
                     default=24, help='batch_size per gpu')
 parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
 parser.add_argument('--deterministic', type=int,  default=1,
@@ -86,6 +85,8 @@ if __name__ == "__main__":
     snapshot_path = snapshot_path + '_lr' + str(args.base_lr) if args.base_lr != 0.01 else snapshot_path
     snapshot_path = snapshot_path + '_'+str(args.img_size)
     snapshot_path = snapshot_path + '_s'+str(args.seed) if args.seed!=1234 else snapshot_path
+    
+    print(f"batch_size={args.batch_size}")
 
     if not os.path.exists(snapshot_path):
         os.makedirs(snapshot_path)
