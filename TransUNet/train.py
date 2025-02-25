@@ -42,6 +42,11 @@ parser.add_argument('--vit_name', type=str,
                     default='R50-ViT-B_16', help='select one vit model')
 parser.add_argument('--vit_patches_size', type=int,
                     default=16, help='vit_patches_size, default is 16')
+# PVT 参数配置
+parser.add_argument('--finetune', default='', help='finetune from checkpoint')
+parser.add_argument('--model', default='pvt_small', type=str, metavar='MODEL',
+                        help='Name of model to train')
+
 args = parser.parse_args()
 
 
@@ -101,3 +106,23 @@ if __name__ == "__main__":
 
     trainer = {'Synapse': trainer_synapse,}
     trainer[dataset_name](args, net, snapshot_path)
+
+    # 加载预训练模型
+    if args.finetune:
+        if args.finetune.startswith('https'):
+            checkpoint = torch.hub.load_state_dict_from_url(
+                args.finetune, map_location='cpu', check_hash=True)
+        else:
+            checkpoint = torch.load(args.finetune, map_location='cpu')
+
+        if 'model' in checkpoint:
+            checkpoint_model = checkpoint['model']
+        else:
+            checkpoint_model = checkpoint
+        state_dict = net.state_dict()
+        for k in ['head.weight', 'head.bias', 'head_dist.weight', 'head_dist.bias']:
+            if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
+                print(f"Removing key {k} from pretrained checkpoint")
+                del checkpoint_model[k]
+
+        net.load_state_dict(checkpoint_model, strict=False)
