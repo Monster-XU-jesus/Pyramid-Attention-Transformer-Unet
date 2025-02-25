@@ -38,7 +38,7 @@ parser.add_argument('--img_size', type=int,
 parser.add_argument('--seed', type=int,
                     default=1234, help='random seed')
 parser.add_argument('--n_skip', type=int,
-                    default=3, help='using number of skip-connect, default is num')
+                    default=0, help='不使用skip-connect')
 parser.add_argument('--vit_name', type=str,
                     default='R50-ViT-B_16', help='select one vit model')
 parser.add_argument('--vit_patches_size', type=int,
