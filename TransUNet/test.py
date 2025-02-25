@@ -121,7 +121,7 @@ if __name__ == "__main__":
     # snapshot = os.path.join(snapshot_path, 'best_model.pth')
     # if not os.path.exists(snapshot): snapshot = snapshot.replace('best_model', 'epoch_'+str(args.max_epochs-1))
     # net.load_state_dict(torch.load(snapshot))
-    snapshot_path = "./model/TU_Synapse224/TU_pretrain_R50-ViT-B_16_skip3_epo150_bs3_224"
+    snapshot_path = "./model/TU_Synapse224/TU_pretrain_R50-ViT-B_16_skip3_epo150_bs24_224"
     snapshot = os.path.join(snapshot_path, 'epoch_149.pth')
     if not os.path.exists(snapshot): snapshot = snapshot.replace('epoch_149', 'best_model')
     net.load_state_dict(torch.load(snapshot))

@@ -34,7 +34,7 @@ def trainer_synapse(args, model, snapshot_path):
         random.seed(args.seed + worker_id)
 
     trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True,
-                             worker_init_fn=worker_init_fn)
+                             worker_init_fn=worker_init_fn, drop_last=True)
     if args.n_gpu > 1:
         model = nn.DataParallel(model)
     model.train()

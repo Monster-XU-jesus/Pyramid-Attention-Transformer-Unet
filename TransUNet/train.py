@@ -5,8 +5,8 @@ import random
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-from networks.vit_seg_modeling_conv import PyramidAttentionTransfromerUnet as ViT_seg
-from networks.vit_seg_modeling_conv import CONFIGS as CONFIGS_ViT_seg
+from networks.vit_seg_modeling_noneskip import PyramidAttentionTransfromerUnet as ViT_seg
+from networks.vit_seg_modeling_noneskip import CONFIGS as CONFIGS_ViT_seg
 from trainer import trainer_synapse
 import torch
 print(torch.cuda.is_available())
