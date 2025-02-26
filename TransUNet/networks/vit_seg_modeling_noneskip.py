@@ -163,9 +163,9 @@ class Embeddings(nn.Module):
         x = x.transpose(-1, -2)  # (B, n_patches, hidden)
 
         embeddings = x + self.position_embeddings
-        #print(embeddings.shape) #[24, 196, 768]
+        #print(embeddings.shape) #[24, 196, 768]  # 注释掉
         embeddings = self.dropout(embeddings)
-        #print(embeddings.shape)
+        #print(embeddings.shape)  # 注释掉
         return embeddings, features
 
 
@@ -289,40 +289,6 @@ class Conv2dReLU(nn.Sequential):
         super(Conv2dReLU, self).__init__(conv, bn, relu)
 
 
-class DecoderBlock(nn.Module):
-    def __init__(
-            self,
-            in_channels,
-            out_channels,
-            skip_channels=0,
-            use_batchnorm=True,
-    ):
-        super().__init__()
-        # print(f"必看DecoderBlock in_channels={in_channels}, out_channels={out_channels}, skip_channels={skip_channels}")
-        self.conv1 = Conv2dReLU(
-            in_channels,
-            out_channels,
-            kernel_size=3,
-            padding=1,
-            use_batchnorm=use_batchnorm,
-        )
-        self.conv2 = Conv2dReLU(
-            out_channels,
-            out_channels,
-            kernel_size=3,
-            padding=1,
-            use_batchnorm=use_batchnorm,
-        )
-        self.up = nn.UpsamplingBilinear2d(scale_factor=2)
-
-    def forward(self, x, skip=None):
-        # print(f"\nup before x.shape={x.shape}")
-        x = self.up(x)
-        # print(f"up after: x.shape={x.shape}")
-        x = self.conv1(x)
-        x = self.conv2(x)
-        # print(f"DecoderBlock output shape: {x.shape}")
-        return x
 
 class SegmentationHead(nn.Sequential):
 
@@ -331,6 +297,20 @@ class SegmentationHead(nn.Sequential):
         upsampling = nn.UpsamplingBilinear2d(scale_factor=upsampling) if upsampling > 1 else nn.Identity()
         super().__init__(conv2d, upsampling)
 
+class DecoderBlock(nn.Module):
+    def __init__(
+            self,
+            in_channels,
+            out_channels,
+    ):
+        super().__init__()
+        self.up = nn.Sequential(
+            nn.Upsample(scale_factor=2, mode="bilinear"),
+            Conv2dReLU(in_channels, out_channels, kernel_size=3, padding=1)
+        )
+
+    def forward(self, x):
+        return self.up(x)
 
 class DecoderCup(nn.Module):
     def __init__(self, config):
@@ -339,49 +319,20 @@ class DecoderCup(nn.Module):
         inner_channels = [512, 256, 128, 64]
         decoder_channels = [256, 128, 64, 16]
 
-        blocks = [
-            DecoderBlock(in_ch, out_ch) for in_ch, out_ch in zip(inner_channels, decoder_channels)
-        ]
-        self.blocks = nn.ModuleList(blocks)
-
-    def forward(self, x, features):
-        B, N, C = x.shape
-        h = w = int(N ** 0.5)
-        x = x.permute(0, 2, 1).view(B, C, h, w)  # (B, C, N) -> (B, C, h, w)
-
-        for i, block in enumerate(self.blocks):
-            x = block(x, skip=features[i] if i<len(features) else None)
-        return x
-       
-
-
-class VisionTransformer(nn.Module):
-    def __init__(self, config, img_size=224, num_classes=21843, zero_head=False, vis=False):
-        super(VisionTransformer, self).__init__()
-        self.num_classes = num_classes
-        self.zero_head = zero_head
-        self.classifier = config.classifier
-        self.transformer = Transformer(config, img_size, vis)
-        self.decoder = DecoderCup(config)
-        self.segmentation_head = SegmentationHead(
-            in_channels=config['decoder_channels'][-1],
-            out_channels=config['n_classes'],
-            kernel_size=3,
+        self.blocks = nn.Sequential(
+            DecoderBlock(512, 256),  # 14x14 -> 28x28
+            DecoderBlock(256, 128),  # 28x28 -> 56x56
+            DecoderBlock(128, 64),   # 56x56 -> 112x112
+            DecoderBlock(64, 32)     # 112x112 -> 224x224
         )
-        self.config = config
-
+    
+    # 添加forward方法
     def forward(self, x):
-        # print(f"\n{x.shape}")
-        if x.size()[1] == 1:
-            x = x.repeat(1,3,1,1)
-        # print(f"\n{x.shape}")
-        x, attn_weights, features = self.transformer(x)
-        # print(f"self.decoder之前{x.shape}")
-        x = self.decoder(x, features)
-        # print(f"self.decoder之后{x.shape}")
+        # 调整输入维度 [B, C, H, W] -> 保持原维度
+        for block in self.blocks:
+            x = block(x)
+        return x
 
-        logits = self.segmentation_head(x)
-        return logits
 
     def load_from(self, weights):
         with torch.no_grad():
@@ -444,10 +395,29 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         self.decoder = DecoderCup(config)
         # print(f"num_classes: {num_classes}")
         self.seg_head = SegmentationHead(
-            in_channels=config.decoder_channels[-1],
+            in_channels=32, # 匹配Decoder最后一层的输出
             out_channels=num_classes,
-            kernel_size=3
         )
+
+        # 通道对齐卷积（不太理解不严格递增能不能行？）
+        self.stage_convs = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(64, 128, kernel_size=1),  # 64->128
+                nn.BatchNorm2d(128),
+                nn.ReLU(inplace=True),
+            ),
+            nn.Sequential(
+                nn.Conv2d(128, 256, kernel_size=1),  # 128->256
+                nn.BatchNorm2d(256),
+                nn.ReLU(inplace=True),
+            ),
+            nn.Sequential(
+                nn.Conv2d(320, 512, kernel_size=1),  # 256->512（原320->256改为320->512）
+                nn.BatchNorm2d(512),
+                nn.ReLU(inplace=True),
+            ),
+            nn.Identity(),
+        ])
 
 
     def forward(self, x):
@@ -457,18 +427,20 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         _ = self.pvt(x)
         
         s1 = self.pvt.get_stage_features(1)
-        # print(f"s1.shape={s1.shape}")
+        # print(f"s1.shape={s1.shape}")  # 注释掉
         s2 = self.pvt.get_stage_features(2)
-        # print(f"s2.shape={s2.shape}")
+        # print(f"s2.shape={s2.shape}")  # 注释掉
         s3 = self.pvt.get_stage_features(3)
-        # print(f"s3.shape={s3.shape}")
+        # print(f"s3.shape={s3.shape}")  # 注释掉
         s4 = self.pvt.get_stage_features(4)
-        # print(f"s4.shape={s4.shape}")
+        # print(f"s4.shape={s4.shape}")  # 注释掉
 
         s4_adapted = self.adapter(s4)
-
-        x = self.decoder(s4_adapted, [s3, s2, s1])
+        #print("PVTAdapter输出形状:", s4_adapted.shape)  # 注释掉
+        x = self.decoder(s4_adapted)
+        #print("Decoder输出形状:", x.shape)  # 注释掉
         logits = self.seg_head(x)
+        #print("SegHead输出形状:", logits.shape)  # 注释掉
         return logits
 
 

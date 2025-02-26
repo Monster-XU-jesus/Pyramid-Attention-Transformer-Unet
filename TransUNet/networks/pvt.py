@@ -279,7 +279,8 @@ class PVTAdapter(nn.Module):
 
         # 上采样到14x14
         spatial_feats = self.up(spatial_feats) # [B,512,14,14]
-        return spatial_feats.flatten(2).permute(0,2,1)  # [B,196,512]
+        print(f"PVTAdapter上采样后的特征图shape: {spatial_feats.shape}")
+        return spatial_feats
 
     
 def _conv_filter(state_dict, patch_size=16):
