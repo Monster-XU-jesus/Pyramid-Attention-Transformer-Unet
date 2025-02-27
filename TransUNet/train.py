@@ -106,68 +106,11 @@ if __name__ == "__main__":
     # net.load_from(weights=np.load(config_vit.pretrained_path))
     # net.load_from(weights=np.load('./model/vit_checkpoint/imagenet21k/R50+ViT-B_16.npz'))
 
-    # sd = torch.load('./pretrained/pvt_tiny.pth')
-    # print(sd.keys())
-    # net.load_state_dict(sd)
+
     # 加载预训练模型
     if args.finetune:
-        print(f"正在从 {args.finetune} 加载检查点")
-        if args.finetune.startswith('https'):
-            checkpoint = torch.hub.load_state_dict_from_url(
-                args.finetune, map_location='cpu', check_hash=True)
-        else:
-            checkpoint = torch.load(args.finetune, map_location='cpu')
-
-        if 'model' in checkpoint:
-            checkpoint_model = checkpoint['model']
-        else:
-            checkpoint_model = checkpoint
-            
-        # 添加打印信息来检查模型加载情况
-        print(f"预训练模型中的键数量: {len(checkpoint_model.keys())}")
-        state_dict = net.state_dict()
-        print(f"当前模型中的键数量: {len(state_dict.keys())}")
-        
-        # 在加载前记录某些关键层的参数
-        key_params_before = {}
-        for key in list(state_dict.keys())[:5]:  # 取前5个键作为示例
-            if 'num_batches_tracked' not in key:  # 跳过批次追踪参数
-                key_params_before[key] = state_dict[key].clone().cpu().numpy().mean()
-        
-        # 创建新的状态字典用于存储映射后的权重
-        new_state_dict = {}
-        
-        # 对预训练模型的键名添加pvt.前缀进行映射
-        for k, v in checkpoint_model.items():
-            # 跳过head相关的键
-            if k.startswith('head.'):
-                continue
-                
-            # 添加pvt.前缀后检查是否匹配
-            new_k = 'pvt.' + k
-            if new_k in state_dict:
-                new_state_dict[new_k] = v
-                
-        print(f"映射后匹配的键数量: {len(new_state_dict)}")
-        print(f"匹配键的示例: {list(new_state_dict.keys())[:5] if new_state_dict else '无'}")
-        
-        # 加载映射后的状态字典
-        if new_state_dict:
-            net.load_state_dict(new_state_dict, strict=False)
-            print("预训练模型参数已成功加载！共加载了 {} 个参数".format(len(new_state_dict)))
-            
-            # 检查参数是否发生改变
-            for key in key_params_before:
-                if key in new_state_dict:
-                    current_mean = state_dict[key].cpu().numpy().mean()
-                    before_mean = key_params_before[key]
-                    print(f"参数 {key}: 加载前均值 = {before_mean:.6f}, 加载后均值 = {current_mean:.6f}")
-                    if abs(current_mean - before_mean) > 1e-6:
-                        print(f"  ✓ 参数已成功更新")
-                    else:
-                        print(f"  ✗ 参数未发生变化")
-        else:
-            print("警告：没有找到匹配的参数，使用随机初始化")
+        # 使用专用方法加载PVT预训练权重
+        net.load_from_pretrained(args.finetune)
 
     trainer = {'Synapse': trainer_synapse,}
     trainer[dataset_name](args, net, snapshot_path)

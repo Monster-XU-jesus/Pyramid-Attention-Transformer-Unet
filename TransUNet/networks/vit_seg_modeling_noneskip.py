@@ -443,6 +443,98 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         #print("SegHead输出形状:", logits.shape)  # 注释掉
         return logits
 
+    # 添加预训练模型加载方法
+    def load_from_pretrained(self, pretrained_path):
+        """专门用于加载PVT预训练权重的方法"""
+        print(f"正在从 {pretrained_path} 加载PVT预训练权重")
+        if pretrained_path.startswith('https'):
+            checkpoint = torch.hub.load_state_dict_from_url(
+                pretrained_path, map_location='cpu', check_hash=True)
+        else:
+            checkpoint = torch.load(pretrained_path, map_location='cpu')
+        
+        # 检查预训练模型的键格式
+        if 'model' in checkpoint:
+            checkpoint_model = checkpoint['model']
+        else:
+            checkpoint_model = checkpoint
+            
+        print(f"预训练模型中的键数量: {len(checkpoint_model.keys())}")
+        print(f"checkpoint_model.keys()={checkpoint_model.keys()}")
+        
+        # 提取原始pvt模型键
+        pvt_state_dict = self.pvt.state_dict()
+        print(f"原模型中的键数量: {len(pvt_state_dict.keys())}")
+        print(f"\npvt_state_dict.keys()={pvt_state_dict.keys()}")
+        new_state_dict = {}
+
+        # 记录权重加载前后的状态变化
+        key_params_before = {}
+        for key in list(pvt_state_dict.keys())[:5]:
+            if 'num_batches_tracked' not in key:
+                key_params_before[key] = pvt_state_dict[key].clone().cpu().numpy().mean()
+
+        # 处理可能的前缀差异
+        prefix_to_try = ['', 'pvt.', 'backbone.', 'encoder.']
+        matched_prefix = ''
+        max_matched = 0
+        
+        # 找到最佳匹配前缀
+        for prefix in prefix_to_try:
+            matched = 0
+            for k in checkpoint_model.keys():
+                if k.startswith('head.'):
+                    continue
+                    
+                # 尝试直接键匹配
+                if f"{prefix}{k}" in pvt_state_dict:
+                    matched += 1
+                    
+            if matched > max_matched:
+                max_matched = matched
+                matched_prefix = prefix
+                
+        print(f"最佳匹配前缀: '{matched_prefix}', 匹配键数量: {max_matched}")
+        
+        # 根据最佳前缀进行映射
+        for k, v in checkpoint_model.items():
+            # 跳过分类头
+            if k.startswith('head.'):
+                continue
+                
+            # 使用最佳前缀映射
+            target_key = f"{matched_prefix}{k}"
+            
+            # PVT模型一般会在前面自动加pvt.，因此可能需要移除或添加
+            if target_key in pvt_state_dict:
+                new_state_dict[target_key] = v
+            elif f"pvt.{target_key}" in pvt_state_dict:
+                new_state_dict[f"pvt.{target_key}"] = v
+            elif target_key.startswith('pvt.') and target_key[4:] in pvt_state_dict:
+                new_state_dict[target_key[4:]] = v
+                
+        # 加载状态字典
+        print(f"匹配的键数量: {len(new_state_dict)}")
+        if new_state_dict:
+            missing, unexpected = self.pvt.load_state_dict(new_state_dict, strict=False)
+            print(f"成功加载PVT预训练模型! 缺失键: {len(missing)}, 意外键: {len(unexpected)}")
+            print(f"缺失键示例: {missing[:5] if missing else '无'}")
+            
+            # 检查权重变化
+            for key in key_params_before:
+                if key in new_state_dict:
+                    current_mean = pvt_state_dict[key].cpu().numpy().mean()
+                    before_mean = key_params_before[key]
+                    print(f"参数 {key}: 变化前={before_mean:.6f}, 变化后={current_mean:.6f}")
+                    if abs(current_mean - before_mean) > 1e-6:
+                        print(f"  ✓ 参数已更新")
+                    else:
+                        print(f"  ✗ 参数未变化")
+        else:
+            print("警告: 未找到匹配的参数, 使用随机初始化")
+            
+        return new_state_dict
+
 
 CONFIGS = {
     'ViT-B_16': configs.get_b16_config(),

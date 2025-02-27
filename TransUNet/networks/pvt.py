@@ -279,7 +279,6 @@ class PVTAdapter(nn.Module):
 
         # 上采样到14x14
         spatial_feats = self.up(spatial_feats) # [B,512,14,14]
-        print(f"PVTAdapter上采样后的特征图shape: {spatial_feats.shape}")
         return spatial_feats
 
     
