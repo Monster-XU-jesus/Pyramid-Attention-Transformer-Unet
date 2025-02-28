@@ -41,6 +41,8 @@ def trainer_synapse(args, model, snapshot_path):
     ce_loss = CrossEntropyLoss()
     dice_loss = DiceLoss(num_classes)
     optimizer = optim.SGD(model.parameters(), lr=base_lr, momentum=0.9, weight_decay=0.0001)
+    # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.max_epochs, eta_min=base_lr * 0.01)
+    
     writer = SummaryWriter(snapshot_path + '/log')
     iter_num = 0
     max_epoch = args.max_epochs
@@ -91,6 +93,8 @@ def trainer_synapse(args, model, snapshot_path):
             logging.info("save model to {}".format(save_mode_path))
             iterator.close()
             break
+
+        # scheduler.step()  # 在每个epoch结束时更新学习率
 
     writer.close()
     return "Training Finished!"

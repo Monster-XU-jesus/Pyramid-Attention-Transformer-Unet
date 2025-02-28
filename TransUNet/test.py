@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from datasets.dataset_synapse import Synapse_dataset
 from utils import test_single_volume
-from networks.vit_seg_modeling_noneskip import PyramidAttentionTransfromerUnet as ViT_seg
-from networks.vit_seg_modeling_noneskip import CONFIGS as CONFIGS_ViT_seg
+from networks.vit_seg_modeling_conv import PyramidAttentionTransfromerUnet as ViT_seg
+from networks.vit_seg_modeling_conv import CONFIGS as CONFIGS_ViT_seg
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--volume_path', type=str,
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     # snapshot = os.path.join(snapshot_path, 'best_model.pth')
     # if not os.path.exists(snapshot): snapshot = snapshot.replace('best_model', 'epoch_'+str(args.max_epochs-1))
     # net.load_state_dict(torch.load(snapshot))
-    snapshot_path = "./model/TU_Synapse224/TU_pretrain_R50-ViT-B_16_skip0_epo150_bs24_224"
+    snapshot_path = "./model/TU_Synapse224/TU_pretrain_R50-ViT-B_16_skip3_epo150_bs24_224"
     snapshot = os.path.join(snapshot_path, 'epoch_149.pth')
     if not os.path.exists(snapshot): snapshot = snapshot.replace('epoch_149', 'best_model')
     net.load_state_dict(torch.load(snapshot))
