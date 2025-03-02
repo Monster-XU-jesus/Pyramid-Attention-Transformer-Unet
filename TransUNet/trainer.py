@@ -41,7 +41,10 @@ def trainer_synapse(args, model, snapshot_path):
     ce_loss = CrossEntropyLoss()
     dice_loss = DiceLoss(num_classes)
     optimizer = optim.SGD(model.parameters(), lr=base_lr, momentum=0.9, weight_decay=0.0001)
+    # optimizer = torch.optim.AdamW(model.parameters(), lr=args.base_lr, weight_decay=0.0001)
     # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.max_epochs, eta_min=base_lr * 0.01)
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5, verbose=True)
+
     
     writer = SummaryWriter(snapshot_path + '/log')
     iter_num = 0
@@ -81,6 +84,9 @@ def trainer_synapse(args, model, snapshot_path):
                 labs = label_batch[1, ...].unsqueeze(0) * 50
                 writer.add_image('train/GroundTruth', labs, iter_num)
 
+        # 在每个epoch结束时更新学习率
+        # scheduler.step(loss)  # 使用当前epoch的损失来更新学习率
+
         save_interval = 50  # int(max_epoch/6)
         if epoch_num > int(max_epoch / 2) and (epoch_num + 1) % save_interval == 0:
             save_mode_path = os.path.join(snapshot_path, 'epoch_' + str(epoch_num) + '.pth')
@@ -93,8 +99,6 @@ def trainer_synapse(args, model, snapshot_path):
             logging.info("save model to {}".format(save_mode_path))
             iterator.close()
             break
-
-        # scheduler.step()  # 在每个epoch结束时更新学习率
 
     writer.close()
     return "Training Finished!"

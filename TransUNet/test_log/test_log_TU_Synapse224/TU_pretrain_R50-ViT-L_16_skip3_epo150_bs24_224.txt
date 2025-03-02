@@ -1,0 +1,48 @@
+[10:50:47.458] Namespace(Dataset=<class 'datasets.dataset_synapse.Synapse_dataset'>, base_lr=0.01, batch_size=24, dataset='Synapse', deterministic=1, exp='TU_Synapse224', img_size=224, is_pretrain=True, is_savenii=False, list_dir='./lists/lists_Synapse', max_epochs=30, max_iterations=20000, n_skip=3, num_classes=9, seed=1234, test_save_dir='../predictions', vit_name='R50-ViT-L_16', vit_patches_size=16, volume_path='./data/Synapse/test_vol_h5', z_spacing=1)
+[10:50:47.459] TU_pretrain_R50-ViT-L_16_skip3_epo150_bs24_224
+[10:50:47.460] 12 test iterations per epoch
+[10:52:39.973] idx 0 case case0008 mean_dice 0.596080 mean_hd95 15.719535
+[10:53:52.780] idx 1 case case0022 mean_dice 0.875904 mean_hd95 24.137523
+[10:55:05.841] idx 2 case case0038 mean_dice 0.786876 mean_hd95 10.922224
+[10:57:32.172] idx 3 case case0036 mean_dice 0.826733 mean_hd95 20.559995
+[10:59:24.460] idx 4 case case0032 mean_dice 0.845780 mean_hd95 9.375854
+[11:01:18.178] idx 5 case case0002 mean_dice 0.849374 mean_hd95 8.930937
+[11:02:38.442] idx 6 case case0029 mean_dice 0.708460 mean_hd95 44.887082
+[11:05:32.022] idx 7 case case0003 mean_dice 0.617806 mean_hd95 100.952890
+[11:07:36.166] idx 8 case case0001 mean_dice 0.764746 mean_hd95 17.146292
+[11:09:30.843] idx 9 case case0004 mean_dice 0.770659 mean_hd95 36.757402
+[11:10:38.876] idx 10 case case0025 mean_dice 0.689110 mean_hd95 25.393026
+[11:11:42.623] idx 11 case case0035 mean_dice 0.846334 mean_hd95 17.435836
+[11:11:42.744] Mean class 1 mean_dice 0.853243 mean_hd95 8.459634
+[11:11:42.744] Mean class 2 mean_dice 0.661625 mean_hd95 41.633828
+[11:11:42.744] Mean class 3 mean_dice 0.795235 mean_hd95 31.775145
+[11:11:42.744] Mean class 4 mean_dice 0.719486 mean_hd95 41.446309
+[11:11:42.744] Mean class 5 mean_dice 0.947219 mean_hd95 25.423406
+[11:11:42.744] Mean class 6 mean_dice 0.516773 mean_hd95 13.508221
+[11:11:42.744] Mean class 7 mean_dice 0.855098 mean_hd95 44.933136
+[11:11:42.744] Mean class 8 mean_dice 0.769897 mean_hd95 14.299385
+[11:11:42.744] Testing performance in best val model: mean_dice : 0.764822 mean_hd95 : 27.684883
+[11:34:05.813] Namespace(Dataset=<class 'datasets.dataset_synapse.Synapse_dataset'>, base_lr=0.01, batch_size=24, dataset='Synapse', deterministic=1, exp='TU_Synapse224', img_size=224, is_pretrain=True, is_savenii=False, list_dir='./lists/lists_Synapse', max_epochs=30, max_iterations=20000, n_skip=3, num_classes=9, seed=1234, test_save_dir='../predictions', vit_name='ViT-H_14', vit_patches_size=16, volume_path='./data/Synapse/test_vol_h5', z_spacing=1)
+[11:34:05.813] TU_pretrain_R50-ViT-L_16_skip3_epo150_bs24_224
+[11:34:05.814] 12 test iterations per epoch
+[11:36:02.023] idx 0 case case0008 mean_dice 0.596080 mean_hd95 15.719535
+[11:37:09.303] idx 1 case case0022 mean_dice 0.875904 mean_hd95 24.137523
+[11:38:22.514] idx 2 case case0038 mean_dice 0.786876 mean_hd95 10.922224
+[11:40:46.689] idx 3 case case0036 mean_dice 0.826733 mean_hd95 20.559995
+[11:42:38.834] idx 4 case case0032 mean_dice 0.845780 mean_hd95 9.375854
+[11:44:26.867] idx 5 case case0002 mean_dice 0.849374 mean_hd95 8.930937
+[11:45:40.844] idx 6 case case0029 mean_dice 0.708460 mean_hd95 44.887082
+[11:48:16.506] idx 7 case case0003 mean_dice 0.617806 mean_hd95 100.952890
+[11:50:11.046] idx 8 case case0001 mean_dice 0.764746 mean_hd95 17.146292
+[11:51:57.053] idx 9 case case0004 mean_dice 0.770659 mean_hd95 36.757402
+[11:53:05.845] idx 10 case case0025 mean_dice 0.689110 mean_hd95 25.393026
+[11:54:07.200] idx 11 case case0035 mean_dice 0.846334 mean_hd95 17.435836
+[11:54:07.384] Mean class 1 mean_dice 0.853243 mean_hd95 8.459634
+[11:54:07.385] Mean class 2 mean_dice 0.661625 mean_hd95 41.633828
+[11:54:07.385] Mean class 3 mean_dice 0.795235 mean_hd95 31.775145
+[11:54:07.385] Mean class 4 mean_dice 0.719486 mean_hd95 41.446309
+[11:54:07.385] Mean class 5 mean_dice 0.947219 mean_hd95 25.423406
+[11:54:07.385] Mean class 6 mean_dice 0.516773 mean_hd95 13.508221
+[11:54:07.385] Mean class 7 mean_dice 0.855098 mean_hd95 44.933136
+[11:54:07.385] Mean class 8 mean_dice 0.769897 mean_hd95 14.299385
+[11:54:07.385] Testing performance in best val model: mean_dice : 0.764822 mean_hd95 : 27.684883

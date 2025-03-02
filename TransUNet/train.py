@@ -5,8 +5,8 @@ import random
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-from networks.vit_seg_modeling_conv import PyramidAttentionTransfromerUnet as ViT_seg
-from networks.vit_seg_modeling_conv import CONFIGS as CONFIGS_ViT_seg
+from networks.vit_seg_modeling_conv_module import PyramidAttentionTransfromerUnet as ViT_seg
+from networks.vit_seg_modeling_conv_module import CONFIGS as CONFIGS_ViT_seg
 from trainer import trainer_synapse
 import torch
 
@@ -102,9 +102,11 @@ if __name__ == "__main__":
     config_vit = CONFIGS_ViT_seg[args.vit_name]
     config_vit.n_classes = args.num_classes
     config_vit.n_skip = args.n_skip
+    config_vit.decoder_channels = [256, 128, 64, 16]
     if args.vit_name.find('R50') != -1:
         config_vit.patches.grid = (int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
     net = ViT_seg(config_vit, img_size=args.img_size, num_classes=config_vit.n_classes).cuda()
+    print(net)
     # net.load_from(weights=np.load(config_vit.pretrained_path))
     # net.load_from(weights=np.load('./model/vit_checkpoint/imagenet21k/R50+ViT-B_16.npz'))
 
