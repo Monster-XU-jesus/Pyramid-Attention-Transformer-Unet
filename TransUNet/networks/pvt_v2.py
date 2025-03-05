@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 from functools import partial
 
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
@@ -280,6 +281,7 @@ class PyramidVisionTransformerV2(nn.Module):
 
     def forward_features(self, x):
         B = x.shape[0]
+        self.stage_features.clear()  # 清空缓存
 
         for i in range(self.num_stages):
             patch_embed = getattr(self, f"patch_embed{i + 1}")
@@ -291,8 +293,27 @@ class PyramidVisionTransformerV2(nn.Module):
             x = norm(x)
             if i != self.num_stages - 1:
                 x = x.reshape(B, H, W, -1).permute(0, 3, 1, 2).contiguous()
+                self.stage_features[f"stage_{i+1}"] = x  # 存储CNN格式特征
+            else:
+                self.stage_features[f"stage_{i+1}"] = x  # 存储最后阶段序列特征
 
         return x.mean(dim=1)
+
+
+    def forward(self, x):
+        x = self.forward_features(x)
+        # 返回各阶段特征供TransUNet使用
+        return [
+            self.stage_features["stage_1"], 
+            self.stage_features["stage_2"],
+            self.stage_features["stage_3"],
+            self.stage_features["stage_4"]
+        ]
+
+    # 新增特征获取方法
+    def get_stage_features(self, stage_num):
+        return self.stage_features.get(f"stage_{stage_num}")
+
 
     def forward(self, x):
         x = self.forward_features(x)
@@ -313,6 +334,30 @@ class DWConv(nn.Module):
         x = x.flatten(2).transpose(1, 2)
 
         return x
+
+class PVTAdapter(nn.Module):
+    def __init__(self, in_dim=512, target_patches=196):
+        super().__init__()
+        self.target_size = int(target_patches**0.5)  # 14 for 196
+        self.up = nn.Sequential(
+            nn.Conv2d(in_dim, in_dim, kernel_size=3, padding=1),
+            nn.Upsample(scale_factor=2, mode='bilinear'),
+            nn.GroupNorm(32, in_dim)  # 替代BN更适合小批量
+        )
+
+    def forward(self, x):
+        # x: [B, 50, 512]
+        cls_token = x[:, 0:1]  # 分离CLS token
+        patch_feats = x[:, 1:] # [B, 49, 512]
+
+        # 转换为2D特征图
+        B, N, C = patch_feats.shape
+        h = w = int(np.sqrt(N))
+        spatial_feats = patch_feats.view(B, h, w, C).permute(0, 3, 1, 2)
+
+        # 上采样到14x14
+        spatial_feats = self.up(spatial_feats) # [B,512,14,14]
+        return spatial_feats
 
 
 def _conv_filter(state_dict, patch_size=16):

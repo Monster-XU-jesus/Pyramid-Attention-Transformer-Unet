@@ -18,7 +18,7 @@ from torch.nn.modules.utils import _pair
 from scipy import ndimage
 from . import vit_seg_configs as configs
 from .vit_seg_modeling_resnet_skip import ResNetV2
-from . import pvt
+from . import pvt_v2 as pvt
 
 
 logger = logging.getLogger(__name__)
@@ -451,7 +451,7 @@ class PyramidAttentionTransfromerUnet(nn.Module):
     def __init__(self, config, img_size=224, num_classes=2):
         super().__init__()
         print("这里是conv_module")
-        self.pvt = pvt.pvt_tiny(in_chans=3)
+        self.pvt = pvt.pvt_v2_b1(in_chans=3)
         
         # 特征适配器
         self.adapter = pvt.PVTAdapter(in_dim=512, target_patches=196)
