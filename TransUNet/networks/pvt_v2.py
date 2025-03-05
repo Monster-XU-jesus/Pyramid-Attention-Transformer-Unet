@@ -222,6 +222,8 @@ class PyramidVisionTransformerV2(nn.Module):
         self.num_classes = num_classes
         self.depths = depths
         self.num_stages = num_stages
+        # 初始化stage_features字典用于存储各阶段特征
+        self.stage_features = {}
 
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]  # stochastic depth decay rule
         cur = 0
@@ -346,17 +348,26 @@ class PVTAdapter(nn.Module):
         )
 
     def forward(self, x):
-        # x: [B, 50, 512]
-        cls_token = x[:, 0:1]  # 分离CLS token
-        patch_feats = x[:, 1:] # [B, 49, 512]
-
-        # 转换为2D特征图
-        B, N, C = patch_feats.shape
-        h = w = int(np.sqrt(N))
-        spatial_feats = patch_feats.view(B, h, w, C).permute(0, 3, 1, 2)
-
-        # 上采样到14x14
-        spatial_feats = self.up(spatial_feats) # [B,512,14,14]
+        # x: [B, N, C] 格式，例如 [24, 49, 512]
+        B, N, C = x.shape
+        
+        # 计算特征图的高度和宽度
+        # 对于非完全平方数，我们使用最接近的整数平方根
+        h = w = int(math.sqrt(N) + 0.5)  # 四舍五入到最接近的整数
+        
+        # 安全地处理特征
+        if h * w == N:
+            # 如果N是完全平方数，直接重塑
+            spatial_feats = x.reshape(B, h, w, C).permute(0, 3, 1, 2)
+        else:
+            # 如果N不是完全平方数，使用自适应池化调整大小
+            x_2d = x.permute(0, 2, 1)  # [B, C, N]
+            spatial_feats = F.adaptive_avg_pool2d(
+                x_2d.reshape(B, C, -1, 1), (h*w, 1)
+            ).reshape(B, C, h, w)
+        
+        # 应用上采样
+        spatial_feats = self.up(spatial_feats)
         return spatial_feats
 
 
