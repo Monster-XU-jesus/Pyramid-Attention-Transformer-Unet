@@ -451,7 +451,7 @@ class PyramidAttentionTransfromerUnet(nn.Module):
     def __init__(self, config, img_size=224, num_classes=2):
         super().__init__()
         print("这里是conv_module")
-        self.pvt = pvt.pvt_v2_b1(in_chans=3)
+        self.pvt = pvt.pvt_v2_b2(in_chans=3)
         
         # 特征适配器
         self.adapter = pvt.PVTAdapter(in_dim=512, target_patches=196)
@@ -494,6 +494,7 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         s3 = self.pvt.get_stage_features(3)  # [B,320,14,14]
         s4 = self.pvt.get_stage_features(4)  # [B,50,512]
 
+        
         # 处理最后一层特征
         s4_adapted = self.adapter(s4)  # [B,196,512]
 
@@ -508,7 +509,7 @@ class PyramidAttentionTransfromerUnet(nn.Module):
 
     def load_from_pretrained(self, pretrained_path):
         """专门用于加载PVT预训练权重的方法"""
-        # print(f"正在从 {pretrained_path} 加载PVT预训练权重")
+        print(f"正在从 {pretrained_path} 加载PVT预训练权重")
         if pretrained_path.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
                 pretrained_path, map_location='cpu', check_hash=True)
@@ -523,8 +524,8 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         
         # 提取原始pvt模型键
         pvt_state_dict = self.pvt.state_dict()
-        # print(f"原模型中的键数量: {len(pvt_state_dict.keys())}")
-        # print(f"\npvt_state_dict.keys()={pvt_state_dict.keys()}")
+        print(f"原模型中的键数量: {len(pvt_state_dict.keys())}")
+        print(f"\npvt_state_dict.keys()={pvt_state_dict.keys()}")
         new_state_dict = {}
 
         # 记录权重加载前后的状态变化
@@ -553,7 +554,7 @@ class PyramidAttentionTransfromerUnet(nn.Module):
                 max_matched = matched
                 matched_prefix = prefix
                 
-        # print(f"最佳匹配前缀: '{matched_prefix}', 匹配键数量: {max_matched}")
+        print(f"最佳匹配前缀: '{matched_prefix}', 匹配键数量: {max_matched}")
         
         # 根据最佳前缀进行映射
         for k, v in checkpoint_model.items():
@@ -573,11 +574,11 @@ class PyramidAttentionTransfromerUnet(nn.Module):
                 new_state_dict[target_key[4:]] = v
                 
         # 加载状态字典
-        # print(f"匹配的键数量: {len(new_state_dict)}")
+        print(f"匹配的键数量: {len(new_state_dict)}")
         if new_state_dict:
             missing, unexpected = self.pvt.load_state_dict(new_state_dict, strict=False)
-            # print(f"成功加载PVT预训练模型! 缺失键: {len(missing)}, 意外键: {len(unexpected)}")
-            # print(f"缺失键示例: {missing[:5] if missing else '无'}")
+            print(f"成功加载PVT预训练模型! 缺失键: {len(missing)}, 意外键: {len(unexpected)}")
+            print(f"缺失键示例: {missing[:5] if missing else '无'}")
             
             # 检查权重变化
             for key in key_params_before:
