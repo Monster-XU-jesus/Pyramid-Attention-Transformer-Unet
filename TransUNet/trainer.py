@@ -51,9 +51,10 @@ def trainer_synapse(args, model, snapshot_path):
     max_epoch = args.max_epochs
     max_iterations = args.max_epochs * len(trainloader)  # max_epoch = max_iterations // len(trainloader) + 1
     logging.info("{} iterations per epoch. {} max iterations ".format(len(trainloader), max_iterations))
-    best_performance = 0.0
+    best_performance = float('inf')  # 修改初始化值为正无穷
     iterator = tqdm(range(max_epoch), ncols=70)
     for epoch_num in iterator:
+        epoch_loss = 0.0  # 新增epoch_loss统计
         for i_batch, sampled_batch in enumerate(trainloader):
             image_batch, label_batch = sampled_batch['image'], sampled_batch['label']
             image_batch, label_batch = image_batch.cuda(), label_batch.cuda()
@@ -64,6 +65,8 @@ def trainer_synapse(args, model, snapshot_path):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            
+            epoch_loss += loss.item()  # 累计epoch总loss
             lr_ = base_lr * (1.0 - iter_num / max_iterations) ** 0.9
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr_
@@ -87,6 +90,23 @@ def trainer_synapse(args, model, snapshot_path):
         # 在每个epoch结束时更新学习率
         # scheduler.step(loss)  # 使用当前epoch的损失来更新学习率
 
+        # ============ 新增模型保存逻辑 ============
+        # 计算epoch平均loss
+        epoch_avg_loss = epoch_loss / len(trainloader)
+        
+        # 保存最佳模型
+        if epoch_avg_loss < best_performance:
+            best_performance = epoch_avg_loss
+            save_mode_path = os.path.join(snapshot_path, 'best_model.pth')
+            torch.save(model.state_dict(), save_mode_path)
+            logging.info(f"Save best model with loss {epoch_avg_loss:.4f}")
+            
+        # 保存最新模型
+        save_mode_path = os.path.join(snapshot_path, 'latest_model.pth')
+        torch.save(model.state_dict(), save_mode_path)
+        logging.info("Save latest model")
+
+        # 原有的模型保存逻辑保持不变
         save_interval = 50  # int(max_epoch/6)
         if epoch_num > int(max_epoch / 2) and (epoch_num + 1) % save_interval == 0:
             save_mode_path = os.path.join(snapshot_path, 'epoch_' + str(epoch_num) + '.pth')
