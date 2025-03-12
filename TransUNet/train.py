@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import logging
 import os
 import random
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     timestamp = datetime.now().strftime("%m%d_%H%M%S")
     args.exp = f'TU_{dataset_name}{args.img_size}_{timestamp}'  # 修改行
     
-    snapshot_path = "../model/{}/{}".format(args.exp, 'TU')
+    snapshot_path = "./model/{}/{}".format(args.exp, 'TU')
     snapshot_path = snapshot_path + '_pretrain' if args.is_pretrain else snapshot_path
     snapshot_path += '_' + args.vit_name
     snapshot_path = snapshot_path + '_skip' + str(args.n_skip)
