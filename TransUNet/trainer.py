@@ -81,13 +81,36 @@ def trainer_synapse(args, model, snapshot_path):
                 
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr_
+            
+            with torch.no_grad():
+                preds = torch.argmax(torch.softmax(outputs, dim=1), dim=1)
+                targets = label_batch
+                
+                # 计算IoU（交并比）
+                intersection = (preds & targets).float().sum((1, 2))
+                union = (preds | targets).float().sum((1, 2))
+                iou = (intersection + 1e-6) / (union + 1e-6)
+                
+                # 计算Dice系数（实际值非损失）
+                dice_coeff = (2.0 * intersection) / (preds.float().sum((1, 2)) + targets.float().sum((1, 2)) + 1e-6)
+                
+                # 计算像素精度
+                correct = (preds == targets).float().sum()
+                total = torch.numel(preds)
+                pixel_acc = correct / total
 
             iter_num = iter_num + 1
             writer.add_scalar('info/lr', lr_, iter_num)
             writer.add_scalar('info/total_loss', loss, iter_num)
             writer.add_scalar('info/loss_ce', loss_ce, iter_num)
+            writer.add_scalar('metrics/dice_loss', loss_dice, iter_num) # 了解有什么作用
+            writer.add_scalar('metrics/mean_iou', iou.mean(), iter_num)
+            writer.add_scalar('metrics/mean_dice', dice_coeff.mean(), iter_num) 
+            writer.add_scalar('metrics/pixel_accuracy', pixel_acc, iter_num)
+            writer.add_scalar('metrics/class_iou', iou[1], iter_num)  # 示例记录第1类iou
 
-            logging.info('iteration %d : loss : %f, loss_ce: %f' % (iter_num, loss.item(), loss_ce.item()))
+            logging.info('iteration %d : loss: %f, ce_loss: %f, dice_loss: %f' % 
+                        (iter_num, loss.item(), loss_ce.item(), loss_dice.item()))
 
             if iter_num % 20 == 0:
                 image = image_batch[1, 0:1, :, :]

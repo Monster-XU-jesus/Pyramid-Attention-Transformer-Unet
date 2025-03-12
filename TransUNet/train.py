@@ -83,9 +83,12 @@ if __name__ == "__main__":
     args.root_path = dataset_config[dataset_name]['root_path']
     args.list_dir = dataset_config[dataset_name]['list_dir']
     args.is_pretrain = True
-    args.exp = 'TU_' + dataset_name + str(args.img_size)
-    snapshot_path = "./model/{}/{}".format(args.exp, 'TU')
-#    snapshot_path = "../model/{}/{}".format(args.exp, 'TU')
+    
+    # 生成带时间戳的实验名称
+    timestamp = datetime.now().strftime("%m%d_%H%M%S")
+    args.exp = f'TU_{dataset_name}{args.img_size}_{timestamp}'  # 修改行
+    
+    snapshot_path = "../model/{}/{}".format(args.exp, 'TU')
     snapshot_path = snapshot_path + '_pretrain' if args.is_pretrain else snapshot_path
     snapshot_path += '_' + args.vit_name
     snapshot_path = snapshot_path + '_skip' + str(args.n_skip)
@@ -121,5 +124,6 @@ if __name__ == "__main__":
 
     trainer = {'Synapse': trainer_synapse,}
     trainer[dataset_name](args, net, snapshot_path)
+    print(f"Training outputs will save to: {snapshot_path}")  # 添加路径提示
 
     
