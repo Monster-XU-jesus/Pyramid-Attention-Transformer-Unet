@@ -49,7 +49,9 @@ def trainer_synapse(args, model, snapshot_path):
     writer = SummaryWriter(snapshot_path + '/log')
     iter_num = 0
     max_epoch = args.max_epochs
-    max_iterations = args.max_epochs * len(trainloader)  # max_epoch = max_iterations // len(trainloader) + 1
+    max_iterations = args.max_epochs * len(trainloader)
+    warmup_iterations = args.warmup_epochs * len(trainloader)  # 新增warmup迭代计算
+    logging.info(f"Warmup iterations: {warmup_iterations}")
     logging.info("{} iterations per epoch. {} max iterations ".format(len(trainloader), max_iterations))
     best_performance = float('inf')  # 修改初始化值为正无穷
     iterator = tqdm(range(max_epoch), ncols=70)
@@ -61,13 +63,22 @@ def trainer_synapse(args, model, snapshot_path):
             outputs = model(image_batch)
             loss_ce = ce_loss(outputs, label_batch[:].long())
             loss_dice = dice_loss(outputs, label_batch, softmax=True)
-            loss = 0.5 * loss_ce + 0.5 * loss_dice
+            # 将损失函数中的Dice权重从0.5提升到0.7
+            loss = 0.3 * loss_ce + 0.7 * loss_dice  # 增强Dice的影响 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             
             epoch_loss += loss.item()  # 累计epoch总loss
-            lr_ = base_lr * (1.0 - iter_num / max_iterations) ** 0.9
+            # 修改学习率调度逻辑
+            if iter_num < warmup_iterations:
+                # Warmup阶段：线性增长
+                lr_ = base_lr * (iter_num / warmup_iterations)
+            else:
+                # 原多项式衰减策略
+                progress = (iter_num - warmup_iterations) / (max_iterations - warmup_iterations)
+                lr_ = base_lr * (1.0 - progress) ** 0.9
+                
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr_
 
