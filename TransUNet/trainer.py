@@ -21,6 +21,16 @@ def trainer_synapse(args, model, snapshot_path):
                         format='[%(asctime)s.%(msecs)03d] %(message)s', datefmt='%H:%M:%S')
     logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
     logging.info(str(args))
+    
+    # 新增参数量统计（在多GPU包装之后）
+    if args.n_gpu > 1:
+        model = nn.DataParallel(model)
+    
+    # 统计模型参数（考虑DataParallel包装）
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logging.info(f"模型总参数量: {total_params / 1e6:.2f}M")
+    logging.info(f"可训练参数量: {trainable_params / 1e6:.2f}M")
     base_lr = args.base_lr
     num_classes = args.num_classes
     batch_size = args.batch_size * args.n_gpu

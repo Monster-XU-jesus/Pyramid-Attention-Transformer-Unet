@@ -49,10 +49,6 @@ parser.add_argument('--vit_patches_size', type=int,
                     default=16, help='vit_patches_size, default is 16')
 # PVT 参数配置
 parser.add_argument('--finetune', default='', help='finetune from checkpoint')
-parser.add_argument('--model', default='pvt_small', type=str, metavar='MODEL',
-                        help='Name of model to train')
-parser.add_argument('--cfg', type=str, 
-                    help='path to config file')
 
 args = parser.parse_args()
 
@@ -112,7 +108,7 @@ if __name__ == "__main__":
     if args.vit_name.find('R50') != -1:
         config_vit.patches.grid = (int(args.img_size / args.vit_patches_size), int(args.img_size / args.vit_patches_size))
     net = ViT_seg(config_vit, img_size=args.img_size, num_classes=config_vit.n_classes).cuda()
-    print(net)
+    # print(net)
     # net.load_from(weights=np.load(config_vit.pretrained_path))
     # net.load_from(weights=np.load('./model/vit_checkpoint/imagenet21k/R50+ViT-B_16.npz'))
 
