@@ -322,6 +322,8 @@ class DecoderBlock(nn.Module):
             nn.ReLU(inplace=True)
         ) if skip_channels > 0 else None
 
+        self.cbam = CBAM(out_channels)
+
     def forward(self, x, skip=None):
         # print(f"\nup before x.shape={x.shape}")
         x = self.up(x)  # 上采样，将特征图分辨率扩大2倍
@@ -335,6 +337,7 @@ class DecoderBlock(nn.Module):
         x = self.conv1(x)  # 第一个卷积块处理
         x = self.conv2(x)  # 第二个卷积块处理
         # print(f"\nDecoderBlock 卷积处理结束: x.shape={x.shape}")
+        x = self.cbam(x)  # 添加CBAM
         return x
 
 
@@ -607,4 +610,34 @@ CONFIGS = {
     'R50-ViT-L_16': configs.get_r50_l16_config(),
     'testing': configs.get_testing(),
 }
+
+class CBAM(nn.Module):
+    def __init__(self, channels, reduction_ratio=16):
+        super().__init__()
+        # 通道注意力
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channels, channels // reduction_ratio),
+            nn.ReLU(inplace=True),
+            nn.Linear(channels // reduction_ratio, channels)
+        )
+        self.sigmoid = nn.Sigmoid()
+        
+        # 空间注意力
+        self.conv = nn.Conv2d(2, 1, kernel_size=7, padding=3)
+        
+    def forward(self, x):
+        # 通道注意力
+        avg_out = self.fc(self.avg_pool(x).view(x.size(0), -1))
+        max_out = self.fc(self.max_pool(x).view(x.size(0), -1))
+        channel = self.sigmoid(avg_out + max_out).unsqueeze(2).unsqueeze(3)
+        
+        # 空间注意力
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        spatial = torch.cat([avg_out, max_out], dim=1)
+        spatial = self.sigmoid(self.conv(spatial))
+        
+        return x * channel * spatial
 
