@@ -322,7 +322,7 @@ class DecoderBlock(nn.Module):
             nn.ReLU(inplace=True)
         ) if skip_channels > 0 else None
 
-        self.cbam = CBAM(out_channels)
+        # self.cbam = CBAM(out_channels)
 
     def forward(self, x, skip=None):
         # print(f"\nup before x.shape={x.shape}")
@@ -337,7 +337,7 @@ class DecoderBlock(nn.Module):
         x = self.conv1(x)  # 第一个卷积块处理
         x = self.conv2(x)  # 第二个卷积块处理
         # print(f"\nDecoderBlock 卷积处理结束: x.shape={x.shape}")
-        x = self.cbam(x)  # 添加CBAM
+        # x = self.cbam(x)  # 添加CBAM
         return x
 
 
@@ -483,6 +483,12 @@ class PyramidAttentionTransfromerUnet(nn.Module):
             nn.Identity(),
         ])
 
+        self.stage_attentions = nn.ModuleList([
+            CBAM(64),   # s1维度
+            CBAM(256),  # s2维度
+            CBAM(512)   # s3维度
+        ])
+
     def forward(self, x):
         # 处理单通道输入（灰度图转RGB）
         if x.size()[1] == 1:  # 检查通道维度是否为1
@@ -492,9 +498,9 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         _ = self.pvt(x)  # 仅用于提取特征
         
         # 获取各阶段特征
-        s1 = self.pvt.get_stage_features(1)  # [B,64,56,56]
-        s2 = self.pvt.get_stage_features(2)  # [B,128,28,28]
-        s3 = self.pvt.get_stage_features(3)  # [B,320,14,14]
+        s1 = self.stage_attentions[0](self.stage_convs[0](s1))
+        s2 = self.stage_attentions[1](self.stage_convs[1](s2))
+        s3 = self.stage_attentions[2](self.stage_convs[2](s3))
         s4 = self.pvt.get_stage_features(4)  # [B,50,512]
 
         
