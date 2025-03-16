@@ -498,9 +498,9 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         _ = self.pvt(x)  # 仅用于提取特征
         
         # 获取各阶段特征
-        s1 = self.stage_attentions[0](self.stage_convs[0](s1))
-        s2 = self.stage_attentions[1](self.stage_convs[1](s2))
-        s3 = self.stage_attentions[2](self.stage_convs[2](s3))
+        s1 = self.pvt.get_stage_features(1)  # [B,64,56,56]
+        s2 = self.pvt.get_stage_features(2)  # [B,128,28,28]
+        s3 = self.pvt.get_stage_features(3)  # [B,320,14,14]
         s4 = self.pvt.get_stage_features(4)  # [B,50,512]
 
         
@@ -508,9 +508,9 @@ class PyramidAttentionTransfromerUnet(nn.Module):
         s4_adapted = self.adapter(s4)  # [B,196,512]
 
         # 通道对齐
-        s1 = self.stage_convs[0](s1)  # [B,64,56,56]
-        s2 = self.stage_convs[1](s2)  # [B,128,28,28] 
-        s3 = self.stage_convs[2](s3)  # [B,320->256,14,14]
+        s1 = self.stage_attentions[0](self.stage_convs[0](s1))
+        s2 = self.stage_attentions[1](self.stage_convs[1](s2))
+        s3 = self.stage_attentions[2](self.stage_convs[2](s3))
 
         x = self.decoder(s4_adapted, [s3, s2, s1])
         logits = self.seg_head(x)
